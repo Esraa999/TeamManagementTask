@@ -1,0 +1,508 @@
+@{
+    ViewBag.Title = "User Dashboard";
+    var userId = ViewBag.UserId;
+    var userName = ViewBag.UserName;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewBag.Title - Team Management System</title>
+    
+    <!-- ==> Added: Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- ==> Added: Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        /* ==> Added: Custom CSS */
+        body {
+            background-color: #f8f9fa;
+        }
+        .dashboard-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .task-item {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+            transition: all 0.3s;
+        }
+        .task-item:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+        .task-item.status-Pending {
+            border-left-color: #ffc107;
+        }
+        .task-item.status-InProgress {
+            border-left-color: #17a2b8;
+        }
+        .task-item.status-Completed {
+            border-left-color: #28a745;
+        }
+        .task-item.status-Cancelled {
+            border-left-color: #dc3545;
+        }
+        .status-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        .badge-Pending {
+            background-color: #ffc107;
+            color: black;
+        }
+        .badge-InProgress {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .badge-Completed {
+            background-color: #28a745;
+            color: white;
+        }
+        .badge-Cancelled {
+            background-color: #dc3545;
+            color: white;
+        }
+        .priority-high {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .priority-medium {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .priority-low {
+            color: #28a745;
+            font-weight: bold;
+        }
+        /* ==> Real-time update animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .new-task {
+            animation: fadeIn 0.5s;
+        }
+        .stats-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stats-card h3 {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <!-- ==> Added: Vue.js Application Container -->
+    <div id="app" class="container-fluid">
+        
+        <!-- ==> Header Section -->
+        <div class="dashboard-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-user-circle"></i> User Dashboard</h2>
+                    <p class="mb-0">Welcome, <strong>{{ userName }}</strong>! View your assigned tasks below.</p>
+                </div>
+                <div>
+                    <a href="/" class="btn btn-outline-light">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==> Real-time Status Indicator -->
+        <div class="alert alert-info" v-if="isConnected">
+            <i class="fas fa-wifi"></i> Real-time updates: <strong>Connected</strong>
+            <small class="ml-2">Your tasks will update automatically</small>
+        </div>
+        <div class="alert alert-warning" v-else>
+            <i class="fas fa-exclamation-triangle"></i> Real-time updates: <strong>Disconnected</strong>
+        </div>
+
+        <!-- ==> Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <h3>{{ totalTasks }}</h3>
+                    <p class="text-muted mb-0">Total Tasks</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <h3>{{ pendingTasks }}</h3>
+                    <p class="text-muted mb-0">Pending</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <h3>{{ inProgressTasks }}</h3>
+                    <p class="text-muted mb-0">In Progress</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <h3>{{ completedTasks }}</h3>
+                    <p class="text-muted mb-0">Completed</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==> Filters -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label>Filter by Status:</label>
+                        <select class="form-control" v-model="filterStatus" @change="filterTasks">
+                            <option value="">All Status</option>
+                            <option value="Pending">Pending</option>
+                            <option value="InProgress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label>Search:</label>
+                        <input type="text" class="form-control" v-model="searchText" @input="filterTasks" placeholder="Search tasks...">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button class="btn btn-secondary btn-block" @click="resetFilters">
+                            <i class="fas fa-redo"></i> Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==> Loading Indicator -->
+        <div v-if="loading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p>Loading your tasks...</p>
+        </div>
+
+        <!-- ==> Tasks List -->
+        <div v-else>
+            <!-- Task Items -->
+            <div v-for="task in filteredTasks" :key="task.taskId" 
+                 :class="['task-item', 'status-' + task.taskStatus, task.isNew ? 'new-task' : '']">
+                
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h4 class="mb-0">
+                        <i class="fas fa-check-circle"></i> {{ task.taskName }}
+                    </h4>
+                    <span :class="['status-badge', 'badge-' + task.taskStatus]">
+                        {{ task.taskStatus }}
+                    </span>
+                </div>
+                
+                <p class="text-muted mb-3">{{ task.description }}</p>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <small class="text-muted">
+                            <i class="fas fa-project-diagram"></i> <strong>Activity:</strong><br>
+                            {{ task.activityName }}
+                        </small>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">
+                            <i class="fas fa-exclamation-circle"></i> <strong>Priority:</strong><br>
+                            <span :class="getPriorityClass(task.priority)">{{ task.priority }}</span>
+                        </small>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">
+                            <i class="fas fa-calendar-alt"></i> <strong>Due Date:</strong><br>
+                            {{ formatDate(task.dueDate) }}
+                        </small>
+                    </div>
+                </div>
+                
+                <!-- New Task Indicator -->
+                <div v-if="task.isNew" class="mt-2">
+                    <span class="badge badge-success">
+                        <i class="fas fa-sparkles"></i> Just Assigned!
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Empty State -->
+            <div v-if="filteredTasks.length === 0" class="empty-state">
+                <i class="fas fa-tasks"></i>
+                <h4>No tasks found</h4>
+                <p>{{ tasks.length === 0 ? 'You have no assigned tasks yet.' : 'No tasks match your filters.' }}</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ==> Added: JavaScript Libraries -->
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Vue.js -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <!-- SignalR -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery-signalr@2.4.3/jquery.signalR.min.js"></script>
+    
+    <!-- ==> SignalR Hub Reference -->
+    <script src="~/signalr/hubs"></script>
+
+    <script>
+        // ==> Added: Vue.js Application for User Dashboard
+        new Vue({
+            el: '#app',
+            data: {
+                userId: @userId, // ==> User ID from server
+                userName: '@userName', // ==> User name from server
+                tasks: [], // ==> All user's tasks
+                filteredTasks: [], // ==> Filtered tasks
+                loading: true, // ==> Loading state
+                isConnected: false, // ==> SignalR connection state
+                filterStatus: '', // ==> Status filter
+                searchText: '' // ==> Search text
+            },
+            computed: {
+                // ==> Computed property: Total tasks count
+                totalTasks() {
+                    return this.tasks.length;
+                },
+                // ==> Computed property: Pending tasks count
+                pendingTasks() {
+                    return this.tasks.filter(t => t.taskStatus === 'Pending').length;
+                },
+                // ==> Computed property: In Progress tasks count
+                inProgressTasks() {
+                    return this.tasks.filter(t => t.taskStatus === 'InProgress').length;
+                },
+                // ==> Computed property: Completed tasks count
+                completedTasks() {
+                    return this.tasks.filter(t => t.taskStatus === 'Completed').length;
+                }
+            },
+            mounted() {
+                // ==> Initialize when Vue app is mounted
+                this.loadUserTasks();
+                this.initSignalR();
+            },
+            methods: {
+                // ==> Load user's tasks from API
+                async loadUserTasks() {
+                    try {
+                        this.loading = true;
+                        
+                        const response = await fetch(`/Task/GetUserTasks?userId=${this.userId}`);
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            this.tasks = result.data;
+                            this.filteredTasks = this.tasks;
+                        } else {
+                            alert('Error loading tasks: ' + result.message);
+                        }
+                        
+                        this.loading = false;
+                    } catch (error) {
+                        console.error('Error loading tasks:', error);
+                        alert('Error loading tasks. Please refresh the page.');
+                        this.loading = false;
+                    }
+                },
+                
+                // ==> Initialize SignalR for real-time updates
+                initSignalR() {
+                    // Create hub proxy
+                    const hub = $.connection.taskNotificationHub;
+                    
+                    // ==> Handler: New task created
+                    hub.client.taskCreated = (taskDTO) => {
+                        console.log('New task received:', taskDTO);
+                        // Check if task is assigned to this user
+                        if (taskDTO.assignedToUserId === this.userId) {
+                            // Mark as new for visual indicator
+                            taskDTO.isNew = true;
+                            this.tasks.push(taskDTO);
+                            this.filterTasks();
+                            
+                            // Remove 'new' indicator after 5 seconds
+                            setTimeout(() => {
+                                taskDTO.isNew = false;
+                            }, 5000);
+                            
+                            // Show notification
+                            this.showNotification('New task assigned: ' + taskDTO.taskName);
+                        }
+                    };
+                    
+                    // ==> Handler: Task updated
+                    hub.client.taskUpdated = (taskDTO) => {
+                        console.log('Task updated:', taskDTO);
+                        
+                        const index = this.tasks.findIndex(t => t.taskId === taskDTO.taskId);
+                        
+                        // If task is in user's list
+                        if (index !== -1) {
+                            // Check if still assigned to this user
+                            if (taskDTO.assignedToUserId === this.userId) {
+                                // Update the task
+                                this.$set(this.tasks, index, taskDTO);
+                                this.filterTasks();
+                            } else {
+                                // Task reassigned to someone else, remove it
+                                this.tasks.splice(index, 1);
+                                this.filterTasks();
+                                this.showNotification('Task "' + taskDTO.taskName + '" was reassigned');
+                            }
+                        } else if (taskDTO.assignedToUserId === this.userId) {
+                            // Task was just assigned to this user
+                            taskDTO.isNew = true;
+                            this.tasks.push(taskDTO);
+                            this.filterTasks();
+                            setTimeout(() => { taskDTO.isNew = false; }, 5000);
+                            this.showNotification('New task assigned: ' + taskDTO.taskName);
+                        }
+                    };
+                    
+                    // ==> Handler: Task status changed
+                    hub.client.taskStatusChanged = (taskId, newStatus) => {
+                        console.log(`Task ${taskId} status changed to ${newStatus}`);
+                        const task = this.tasks.find(t => t.taskId === taskId);
+                        if (task) {
+                            task.taskStatus = newStatus;
+                            this.showNotification('Task status updated: ' + newStatus);
+                        }
+                    };
+                    
+                    // ==> Handler: Task deleted
+                    hub.client.taskDeleted = (taskId) => {
+                        console.log(`Task ${taskId} deleted`);
+                        this.tasks = this.tasks.filter(t => t.taskId !== taskId);
+                        this.filterTasks();
+                        this.showNotification('A task was removed');
+                    };
+                    
+                    // ==> Start SignalR connection
+                    $.connection.hub.start()
+                        .done(() => {
+                            console.log('SignalR connected successfully');
+                            this.isConnected = true;
+                        })
+                        .fail((error) => {
+                            console.error('SignalR connection error:', error);
+                            this.isConnected = false;
+                        });
+                },
+                
+                // ==> Filter tasks based on status and search
+                filterTasks() {
+                    let filtered = this.tasks;
+                    
+                    // Filter by status
+                    if (this.filterStatus) {
+                        filtered = filtered.filter(t => t.taskStatus === this.filterStatus);
+                    }
+                    
+                    // Filter by search text
+                    if (this.searchText) {
+                        const search = this.searchText.toLowerCase();
+                        filtered = filtered.filter(t => 
+                            t.taskName.toLowerCase().includes(search) ||
+                            t.description.toLowerCase().includes(search) ||
+                            t.activityName.toLowerCase().includes(search)
+                        );
+                    }
+                    
+                    this.filteredTasks = filtered;
+                },
+                
+                // ==> Reset filters
+                resetFilters() {
+                    this.filterStatus = '';
+                    this.searchText = '';
+                    this.filteredTasks = this.tasks;
+                },
+                
+                // ==> Get CSS class for priority
+                getPriorityClass(priority) {
+                    switch(priority) {
+                        case 'High': return 'priority-high';
+                        case 'Medium': return 'priority-medium';
+                        case 'Low': return 'priority-low';
+                        default: return '';
+                    }
+                },
+                
+                // ==> Format date for display
+                formatDate(dateString) {
+                    if (!dateString) return 'No due date';
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                },
+                
+                // ==> Show browser notification
+                showNotification(message) {
+                    // Check if browser supports notifications
+                    if (!("Notification" in window)) {
+                        return;
+                    }
+                    
+                    // Request permission if needed
+                    if (Notification.permission === "granted") {
+                        new Notification("Team Management System", {
+                            body: message,
+                            icon: "/Content/icon.png"
+                        });
+                    } else if (Notification.permission !== "denied") {
+                        Notification.requestPermission().then(function (permission) {
+                            if (permission === "granted") {
+                                new Notification("Team Management System", {
+                                    body: message,
+                                    icon: "/Content/icon.png"
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

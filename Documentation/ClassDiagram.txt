@@ -1,0 +1,263 @@
+/*
+==============================================
+CLASS DIAGRAM - Team Management System
+==============================================
+
+This document describes the class structure of the Team Management System.
+
+==============================================
+MODELS (Entity Classes)
+==============================================
+
+┌─────────────────────────────────┐
+│          User                    │
+├─────────────────────────────────┤
+│ - UserId: int                    │
+│ - Username: string               │
+│ - FullName: string               │
+│ - Email: string                  │
+│ - UserRole: string               │
+│ - CreatedDate: DateTime          │
+│ - IsActive: bool                 │
+├─────────────────────────────────┤
+│ + Tasks: ICollection<Task>       │
+└─────────────────────────────────┘
+
+┌─────────────────────────────────┐
+│         Activity                 │
+├─────────────────────────────────┤
+│ - ActivityId: int                │
+│ - ActivityName: string           │
+│ - Description: string            │
+│ - StartDate: DateTime?           │
+│ - EndDate: DateTime?             │
+│ - CreatedDate: DateTime          │
+│ - CreatedBy: int                 │
+│ - IsActive: bool                 │
+├─────────────────────────────────┤
+│ + Creator: User                  │
+│ + Tasks: ICollection<Task>       │
+└─────────────────────────────────┘
+
+┌─────────────────────────────────┐
+│           Task                   │
+├─────────────────────────────────┤
+│ - TaskId: int                    │
+│ - TaskName: string               │
+│ - Description: string            │
+│ - ActivityId: int                │
+│ - AssignedToUserId: int          │
+│ - TaskStatus: string             │
+│ - Priority: string               │
+│ - DueDate: DateTime?             │
+│ - CreatedDate: DateTime          │
+│ - CreatedBy: int                 │
+│ - LastModifiedDate: DateTime?    │
+│ - LastModifiedBy: int?           │
+│ - IsActive: bool                 │
+├─────────────────────────────────┤
+│ + Activity: Activity             │
+│ + AssignedToUser: User           │
+│ + Creator: User                  │
+└─────────────────────────────────┘
+
+==============================================
+DATA TRANSFER OBJECTS (DTOs)
+==============================================
+
+┌─────────────────────────────────┐
+│        TaskDTO                   │
+├─────────────────────────────────┤
+│ + TaskId: int                    │
+│ + TaskName: string               │
+│ + Description: string            │
+│ + ActivityName: string           │
+│ + AssignedToUserName: string     │
+│ + TaskStatus: string             │
+│ + Priority: string               │
+│ + DueDate: DateTime?             │
+└─────────────────────────────────┘
+
+┌─────────────────────────────────┐
+│    CreateTaskViewModel           │
+├─────────────────────────────────┤
+│ + TaskName: string               │
+│ + Description: string            │
+│ + ActivityId: int                │
+│ + AssignedToUserId: int          │
+│ + Priority: string               │
+│ + DueDate: DateTime?             │
+└─────────────────────────────────┘
+
+┌─────────────────────────────────┐
+│   UpdateTaskStatusViewModel      │
+├─────────────────────────────────┤
+│ + TaskId: int                    │
+│ + TaskStatus: string             │
+└─────────────────────────────────┘
+
+==============================================
+DATA ACCESS LAYER
+==============================================
+
+┌─────────────────────────────────┐
+│   TeamManagementContext          │
+├─────────────────────────────────┤
+│ (Inherits: DbContext)            │
+├─────────────────────────────────┤
+│ + Users: DbSet<User>             │
+│ + Activities: DbSet<Activity>    │
+│ + Tasks: DbSet<Task>             │
+├─────────────────────────────────┤
+│ + OnModelCreating()              │
+└─────────────────────────────────┘
+
+┌─────────────────────────────────┐
+│      ITaskRepository             │
+├─────────────────────────────────┤
+│ + GetAllTasks(): List<Task>      │
+│ + GetTaskById(id): Task          │
+│ + GetTasksByUserId(userId)       │
+│ + GetTasksByStatus(status)       │
+│ + CreateTask(task): Task         │
+│ + UpdateTask(task): Task         │
+│ + UpdateTaskStatus(id, status)   │
+│ + DeleteTask(id): bool           │
+└─────────────────────────────────┘
+
+┌─────────────────────────────────┐
+│      TaskRepository              │
+├─────────────────────────────────┤
+│ (Implements: ITaskRepository)    │
+├─────────────────────────────────┤
+│ - _context: TeamManagementContext│
+├─────────────────────────────────┤
+│ + GetAllTasks(): List<Task>      │
+│ + GetTaskById(id): Task          │
+│ + GetTasksByUserId(userId)       │
+│ + GetTasksByStatus(status)       │
+│ + CreateTask(task): Task         │
+│ + UpdateTask(task): Task         │
+│ + UpdateTaskStatus(id, status)   │
+│ + DeleteTask(id): bool           │
+└─────────────────────────────────┘
+
+==============================================
+BUSINESS LOGIC LAYER (Services)
+==============================================
+
+┌─────────────────────────────────┐
+│      ITaskService                │
+├─────────────────────────────────┤
+│ + GetAllTasks(): List<TaskDTO>   │
+│ + GetTaskById(id): TaskDTO       │
+│ + GetUserTasks(userId)           │
+│ + GetTasksByStatus(status)       │
+│ + CreateTask(model): TaskDTO     │
+│ + UpdateTaskStatus(id, status)   │
+│ + AssignTask(taskId, userId)     │
+└─────────────────────────────────┘
+
+┌─────────────────────────────────┐
+│       TaskService                │
+├─────────────────────────────────┤
+│ (Implements: ITaskService)       │
+├─────────────────────────────────┤
+│ - _taskRepository                │
+│ - _notificationHub               │
+├─────────────────────────────────┤
+│ + GetAllTasks(): List<TaskDTO>   │
+│ + GetTaskById(id): TaskDTO       │
+│ + GetUserTasks(userId)           │
+│ + GetTasksByStatus(status)       │
+│ + CreateTask(model): TaskDTO     │
+│ + UpdateTaskStatus(id, status)   │
+│ + AssignTask(taskId, userId)     │
+│ - NotifyTaskUpdate(task)         │
+└─────────────────────────────────┘
+
+==============================================
+SIGNALR HUB (Real-time Communication)
+==============================================
+
+┌─────────────────────────────────┐
+│    TaskNotificationHub           │
+├─────────────────────────────────┤
+│ (Inherits: Hub)                  │
+├─────────────────────────────────┤
+│ + NotifyTaskCreated(taskDTO)     │
+│ + NotifyTaskUpdated(taskDTO)     │
+│ + NotifyTaskStatusChanged()      │
+└─────────────────────────────────┘
+
+==============================================
+CONTROLLERS (API Layer)
+==============================================
+
+┌─────────────────────────────────┐
+│      TaskController              │
+├─────────────────────────────────┤
+│ (Inherits: Controller)           │
+├─────────────────────────────────┤
+│ - _taskService: ITaskService     │
+│ - _hubContext: IHubContext       │
+├─────────────────────────────────┤
+│ + GetAllTasks(): JsonResult      │
+│ + GetTaskById(id): JsonResult    │
+│ + GetUserTasks(userId)           │
+│ + GetTasksByStatus(status)       │
+│ + CreateTask(model): JsonResult  │
+│ + UpdateTaskStatus(model)        │
+│ + AssignTask(taskId, userId)     │
+└─────────────────────────────────┘
+
+┌─────────────────────────────────┐
+│     AdminController              │
+├─────────────────────────────────┤
+│ (Inherits: Controller)           │
+├─────────────────────────────────┤
+│ + Index(): ActionResult          │
+│ + GetActivities(): JsonResult    │
+│ + GetUsers(): JsonResult         │
+└─────────────────────────────────┘
+
+┌─────────────────────────────────┐
+│      UserController              │
+├─────────────────────────────────┤
+│ (Inherits: Controller)           │
+├─────────────────────────────────┤
+│ + Index(): ActionResult          │
+└─────────────────────────────────┘
+
+==============================================
+RELATIONSHIPS
+==============================================
+
+User (1) ──────< (N) Task (AssignedToUser)
+User (1) ──────< (N) Task (Creator)
+User (1) ──────< (N) Activity (Creator)
+Activity (1) ──< (N) Task
+
+TaskService ────> ITaskRepository (depends on)
+TaskService ────> TaskNotificationHub (notifies through)
+TaskController ─> ITaskService (uses)
+TaskController ─> TaskNotificationHub (broadcasts through)
+
+==============================================
+TECHNOLOGY STACK
+==============================================
+
+Backend:
+- ASP.NET MVC 5 (.NET Framework 4.7.2+)
+- Entity Framework 6
+- SignalR 2.x
+- SQL Server
+
+Frontend:
+- Vue.js 2.x
+- SignalR JavaScript Client
+- Bootstrap 4
+- Axios for HTTP requests
+
+==============================================
+*/

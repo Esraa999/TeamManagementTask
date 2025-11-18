@@ -1,0 +1,465 @@
+@{
+    ViewBag.Title = "User Tasks - Team Management";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!-- 
+==> User Dashboard View
+==> Features:
+    1. View assigned tasks
+    2. Filter by status and priority
+    3. Real-time updates via SignalR
+    4. Update own task status
+-->
+
+<div id="userApp" class="container-fluid mt-4" v-cloak>
+    <h1 class="mb-4">
+        <i class="fas fa-user-check"></i> User Tasks
+    </h1>
+
+    <!-- ==> User Selection -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-user-circle"></i> Select User to View Tasks</h5>
+        </div>
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <select v-model="selectedUserId" @@change="loadUserTasks" class="form-control form-control-lg">
+                        <option value="">-- Choose a User --</option>
+                        <option v-for="user in nonAdminUsers" :key="user.UserId" :value="user.UserId">
+                            {{ user.FullName }} ({{ user.Role }})
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-6" v-if="selectedUserId">
+                    <div class="alert alert-info mb-0">
+                        <strong>Viewing tasks for:</strong> {{ selectedUserName }}
+                        <span class="badge badge-primary ml-2">{{ selectedUserRole }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==> Statistics Cards (only show if user selected) -->
+    <div v-if="selectedUserId" class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Total Tasks</h5>
+                    <h2>{{ tasks ? tasks.length : 0 }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h5 class="card-title">Pending</h5>
+                    <h2>{{ getTaskCountByStatus('Pending') }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">In Progress</h5>
+                    <h2>{{ getTaskCountByStatus('InProgress') }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Completed</h5>
+                    <h2>{{ getTaskCountByStatus('Completed') }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==> Real-time Connection Status (only show if user selected) -->
+    <div v-if="selectedUserId" class="alert" :class="isConnected ? 'alert-success' : 'alert-danger'">
+        <i class="fas fa-circle"></i>
+        {{ isConnected ? 'Real-time updates enabled' : 'Real-time updates disconnected' }}
+    </div>
+
+    <!-- ==> Filters (only show if user selected) -->
+    <div v-if="selectedUserId" class="card mb-3">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <input type="text" v-model="searchQuery" class="form-control"
+                           placeholder="Search tasks...">
+                </div>
+                <div class="col-md-4">
+                    <select v-model="filterStatus" class="form-control">
+                        <option value="">All Status</option>
+                        <option value="Pending">Pending</option>
+                        <option value="InProgress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                        <option value="OnHold">On Hold</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select v-model="filterPriority" class="form-control">
+                        <option value="">All Priority</option>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                        <option value="Critical">Critical</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==> Tasks List -->
+    <div class="row">
+        <div class="col-md-12">
+            <!-- Show message if no user selected -->
+            <div v-if="!selectedUserId" class="alert alert-info text-center">
+                <i class="fas fa-info-circle"></i> <strong>Please select a user above to view their tasks</strong>
+            </div>
+
+            <!-- Show no tasks message if user selected but no tasks -->
+            <div v-if="selectedUserId && tasks !== null && filteredTasks.length === 0" class="alert alert-warning">
+                <i class="fas fa-info-circle"></i> No tasks found for this user.
+            </div>
+
+            <!-- ==> Task Cards -->
+            <div class="row">
+                <div v-for="task in filteredTasks" :key="task.TaskId" class="col-md-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-header" :class="getPriorityCardHeaderClass(task.Priority)">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-tasks"></i> {{ task.Title }}
+                                </h5>
+                                <span :class="getPriorityBadgeClass(task.Priority)">
+                                    {{ task.Priority }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">{{ task.Description || 'No description' }}</p>
+                            
+                            <hr>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Activity:</strong><br>
+                                    <span class="badge badge-secondary">{{ task.ActivityName }}</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Status:</strong><br>
+                                    <span :class="getStatusBadgeClass(task.Status)">
+                                        {{ task.Status }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <strong>Due Date:</strong><br>
+                                    <span :class="getDueDateClass(task.DueDate)">
+                                        {{ formatDate(task.DueDate) }}
+                                    </span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Created By:</strong><br>
+                                    {{ task.CreatedByName }}
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <!-- ==> Status Update Form -->
+                            <div class="form-group mb-0">
+                                <label><strong>Update Status:</strong></label>
+                                <div class="input-group">
+                                    <select v-model="task.Status" class="form-control" @@change="updateTaskStatus(task)">
+                                        <option value="Pending">Pending</option>
+                                        <option value="InProgress">In Progress</option>
+                                        <option value="Completed">Completed</option>
+                                        <option value="OnHold">On Hold</option>
+                                    </select>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-success" @@click="updateTaskStatus(task)">
+                                            <i class="fas fa-check"></i> Save
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer text-muted">
+                            <small>
+                                <i class="fas fa-clock"></i> Created: {{ formatDate(task.CreatedDate) }}
+                                | Updated: {{ formatDate(task.UpdatedDate) }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // ==> Vue.js Application for User Dashboard
+        new Vue({
+            el: '#userApp',
+            data: {
+                // ==> Selected user to view tasks for
+                selectedUserId: '',
+                selectedUserName: '',
+                selectedUserRole: '',
+
+                // ==> All users list
+                users: [],
+
+                // ==> Tasks list
+                tasks: null,
+
+                // ==> UI state
+                isConnected: false,
+
+                // ==> Filters
+                searchQuery: '',
+                filterStatus: '',
+                filterPriority: ''
+            },
+            
+            computed: {
+                // ==> Filter out admin users
+                nonAdminUsers() {
+                    return this.users.filter(u => u.Role !== 'Admin');
+                },
+
+                // ==> Filter tasks based on search and filter criteria
+                filteredTasks() {
+                    if (!this.tasks) return [];
+                    let filtered = this.tasks;
+                    
+                    // ==> Filter by search query
+                    if (this.searchQuery) {
+                        const query = this.searchQuery.toLowerCase();
+                        filtered = filtered.filter(t => 
+                            t.Title.toLowerCase().includes(query) || 
+                            t.Description.toLowerCase().includes(query) ||
+                            t.ActivityName.toLowerCase().includes(query)
+                        );
+                    }
+                    
+                    // ==> Filter by status
+                    if (this.filterStatus) {
+                        filtered = filtered.filter(t => t.Status === this.filterStatus);
+                    }
+                    
+                    // ==> Filter by priority
+                    if (this.filterPriority) {
+                        filtered = filtered.filter(t => t.Priority === this.filterPriority);
+                    }
+
+                    // ==> Sort by TaskId descending (newest first)
+                    return filtered.sort((a, b) => b.TaskId - a.TaskId);
+                }
+            },
+            
+            methods: {
+                // ==> Load all users
+                async loadUsers() {
+                    try {
+                        const response = await fetch('/api/users');
+                        this.users = await response.json();
+                        console.log('Loaded users:', this.users);
+                    } catch (error) {
+                        console.error('Error loading users:', error);
+                    }
+                },
+
+                // ==> Load tasks for selected user
+                async loadUserTasks() {
+                    if (!this.selectedUserId) {
+                        this.tasks = null;
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`/api/tasks/user/${this.selectedUserId}`);
+                        this.tasks = await response.json();
+
+                        // Update selected user info
+                        const selectedUser = this.users.find(u => u.UserId === parseInt(this.selectedUserId));
+                        if (selectedUser) {
+                            this.selectedUserName = selectedUser.FullName;
+                            this.selectedUserRole = selectedUser.Role;
+                        }
+
+                        console.log('Loaded tasks for user:', this.selectedUserId, this.tasks);
+                    } catch (error) {
+                        console.error('Error loading tasks:', error);
+                    }
+                },
+                
+                // ==> Update task status
+                async updateTaskStatus(task) {
+                    try {
+                        const response = await fetch(`/api/tasks/${task.TaskId}/status`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ status: task.Status })
+                        });
+                        
+                        if (response.ok) {
+                            // ==> SignalR will broadcast the update to all clients
+                            alert('Task status updated successfully!');
+                        }
+                    } catch (error) {
+                        console.error('Error updating task status:', error);
+                        alert('Error updating task status');
+                    }
+                },
+                
+                // ==> Get count of tasks by status
+                getTaskCountByStatus(status) {
+                    if (!this.tasks) return 0;
+                    return this.tasks.filter(t => t.Status === status).length;
+                },
+                
+                // ==> Get Bootstrap badge class for status
+                getStatusBadgeClass(status) {
+                    const classes = {
+                        'Pending': 'badge badge-warning',
+                        'InProgress': 'badge badge-info',
+                        'Completed': 'badge badge-success',
+                        'OnHold': 'badge badge-secondary'
+                    };
+                    return classes[status] || 'badge badge-secondary';
+                },
+                
+                // ==> Get Bootstrap badge class for priority
+                getPriorityBadgeClass(priority) {
+                    const classes = {
+                        'Low': 'badge badge-secondary',
+                        'Medium': 'badge badge-primary',
+                        'High': 'badge badge-warning',
+                        'Critical': 'badge badge-danger'
+                    };
+                    return classes[priority] || 'badge badge-secondary';
+                },
+                
+                // ==> Get card header class based on priority
+                getPriorityCardHeaderClass(priority) {
+                    const classes = {
+                        'Low': 'bg-light',
+                        'Medium': 'bg-info text-white',
+                        'High': 'bg-warning',
+                        'Critical': 'bg-danger text-white'
+                    };
+                    return classes[priority] || 'bg-light';
+                },
+                
+                // ==> Get class for due date (highlight overdue)
+                getDueDateClass(dueDate) {
+                    if (!dueDate) return '';
+                    const due = new Date(dueDate);
+                    const now = new Date();
+                    if (due < now) {
+                        return 'text-danger font-weight-bold'; // Overdue
+                    } else if ((due - now) < 3 * 24 * 60 * 60 * 1000) {
+                        return 'text-warning font-weight-bold'; // Due soon (within 3 days)
+                    }
+                    return '';
+                },
+                
+                // ==> Format date for display
+                formatDate(date) {
+                    if (!date) return 'N/A';
+                    return new Date(date).toLocaleDateString();
+                },
+                
+                // ==> Setup SignalR connection for real-time updates
+                setupSignalR() {
+                    const hub = $.connection.taskHub;
+                    const vm = this;
+                    
+                    // ==> Listen for task created event
+                    hub.client.taskCreated = function(task) {
+                        console.log('Task created:', task);
+                        // ==> Only add if assigned to selected user
+                        if (task.AssignedToUserId === parseInt(vm.selectedUserId)) {
+                            if (!vm.tasks) vm.tasks = [];
+                            vm.tasks.unshift(task);
+                        }
+                    };
+                    
+                    // ==> Listen for task updated event
+                    hub.client.taskUpdated = function(task) {
+                        console.log('Task updated:', task);
+                        if (!vm.tasks) return;
+                        const index = vm.tasks.findIndex(t => t.TaskId === task.TaskId);
+
+                        if (task.AssignedToUserId === parseInt(vm.selectedUserId)) {
+                            // ==> Task is assigned to selected user
+                            if (index !== -1) {
+                                // ==> Update existing task
+                                vm.$set(vm.tasks, index, task);
+                            } else {
+                                // ==> Add newly assigned task
+                                vm.tasks.unshift(task);
+                            }
+                        } else {
+                            // ==> Task is no longer assigned to selected user
+                            if (index !== -1) {
+                                vm.tasks.splice(index, 1);
+                            }
+                        }
+                    };
+                    
+                    // ==> Listen for task deleted event
+                    hub.client.taskDeleted = function(taskId) {
+                        console.log('Task deleted:', taskId);
+                        if (!vm.tasks) return;
+                        const index = vm.tasks.findIndex(t => t.TaskId === taskId);
+                        if (index !== -1) {
+                            vm.tasks.splice(index, 1);
+                        }
+                    };
+                    
+                    // ==> Listen for task assigned event
+                    hub.client.taskAssigned = function(task, userId) {
+                        console.log('Task assigned:', task, userId);
+                        if (userId === parseInt(vm.selectedUserId)) {
+                            if (!vm.tasks) vm.tasks = [];
+                            const index = vm.tasks.findIndex(t => t.TaskId === task.TaskId);
+                            if (index !== -1) {
+                                vm.$set(vm.tasks, index, task);
+                            } else {
+                                vm.tasks.unshift(task);
+                            }
+                        }
+                    };
+                    
+                    // ==> Start SignalR connection
+                    $.connection.hub.start()
+                        .done(function() {
+                            console.log('SignalR connected');
+                            vm.isConnected = true;
+                        })
+                        .fail(function(error) {
+                            console.error('SignalR connection failed:', error);
+                            vm.isConnected = false;
+                        });
+                }
+            },
+            
+            // ==> Initialize when Vue app is mounted
+            mounted() {
+                this.loadUsers();
+                this.setupSignalR();
+            }
+        });
+    </script>
+}

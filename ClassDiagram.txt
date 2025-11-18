@@ -1,0 +1,223 @@
+========================================
+CLASS DIAGRAM
+Team Management System
+========================================
+
+┌──────────────────────────────────────────┐
+│           <<Model>>                      │
+│              User                        │
+├──────────────────────────────────────────┤
+│ + UserId: int                            │
+│ + Username: string                       │
+│ + FullName: string                       │
+│ + Email: string                          │
+│ + Role: string                           │
+│ + IsActive: bool                         │
+│ + CreatedDate: DateTime                  │
+├──────────────────────────────────────────┤
+│ + Tasks: ICollection<Task>               │ --> Navigation Property: Assigned Tasks
+│ + CreatedActivities: ICollection<...>    │ --> Navigation Property: Created Activities
+│ + CreatedTasks: ICollection<Task>        │ --> Navigation Property: Created Tasks
+└──────────────────────────────────────────┘
+                    │
+                    │ 1
+                    │
+                    │ Creates/Owns
+                    │
+                    ▼ Many
+┌──────────────────────────────────────────┐
+│           <<Model>>                      │
+│            Activity                      │
+├──────────────────────────────────────────┤
+│ + ActivityId: int                        │
+│ + ActivityName: string                   │
+│ + Description: string                    │
+│ + StartDate: DateTime?                   │
+│ + EndDate: DateTime?                     │
+│ + CreatedBy: int                         │
+│ + CreatedDate: DateTime                  │
+│ + IsActive: bool                         │
+├──────────────────────────────────────────┤
+│ + Tasks: ICollection<Task>               │ --> Navigation Property: Related Tasks
+│ + Creator: User                          │ --> Navigation Property: Who created this
+└──────────────────────────────────────────┘
+                    │
+                    │ 1
+                    │
+                    │ Contains
+                    │
+                    ▼ Many
+┌──────────────────────────────────────────┐
+│           <<Model>>                      │
+│             Task                         │
+├──────────────────────────────────────────┤
+│ + TaskId: int                            │
+│ + Title: string                          │
+│ + Description: string                    │
+│ + ActivityId: int                        │
+│ + AssignedToUserId: int?                 │
+│ + Status: string                         │
+│ + Priority: string                       │
+│ + DueDate: DateTime?                     │
+│ + CreatedBy: int                         │
+│ + CreatedDate: DateTime                  │
+│ + UpdatedDate: DateTime                  │
+│ + CompletedDate: DateTime?               │
+├──────────────────────────────────────────┤
+│ + Activity: Activity                     │ --> Navigation Property: Parent Activity
+│ + AssignedToUser: User                   │ --> Navigation Property: Assigned User
+│ + CreatorUser: User                      │ --> Navigation Property: Creator
+└──────────────────────────────────────────┘
+
+
+┌──────────────────────────────────────────┐
+│      <<DbContext>>                       │
+│   TeamManagementDbContext                │
+├──────────────────────────────────────────┤
+│ + Users: DbSet<User>                     │
+│ + Activities: DbSet<Activity>            │
+│ + Tasks: DbSet<Task>                     │
+├──────────────────────────────────────────┤
+│ + OnModelCreating(builder): void         │ --> Configures Entity Relationships
+│ + SaveChanges(): int                     │
+│ + SaveChangesAsync(): Task<int>          │
+└──────────────────────────────────────────┘
+
+
+┌──────────────────────────────────────────┐
+│       <<SignalR Hub>>                    │
+│          TaskHub                         │
+├──────────────────────────────────────────┤
+│ - _context: TeamManagementDbContext      │
+├──────────────────────────────────────────┤
+│ + NotifyTaskCreated(task): Task          │ --> Broadcasts new task creation
+│ + NotifyTaskUpdated(task): Task          │ --> Broadcasts task updates
+│ + NotifyTaskDeleted(taskId): Task        │ --> Broadcasts task deletion
+│ + NotifyTaskAssigned(task): Task         │ --> Broadcasts task assignment
+└──────────────────────────────────────────┘
+
+
+┌──────────────────────────────────────────┐
+│       <<Controller>>                     │
+│       TasksController                    │
+├──────────────────────────────────────────┤
+│ - _context: TeamManagementDbContext      │
+│ - _hubContext: IHubContext<TaskHub>      │
+├──────────────────────────────────────────┤
+│ + GetAllTasks(): ActionResult            │ --> GET: /api/tasks
+│ + GetTaskById(id): ActionResult          │ --> GET: /api/tasks/{id}
+│ + GetTasksByUser(userId): ActionResult   │ --> GET: /api/tasks/user/{userId}
+│ + GetTasksByStatus(status): ActionResult │ --> GET: /api/tasks/status/{status}
+│ + CreateTask(task): ActionResult         │ --> POST: /api/tasks
+│ + UpdateTask(id, task): ActionResult     │ --> PUT: /api/tasks/{id}
+│ + DeleteTask(id): ActionResult           │ --> DELETE: /api/tasks/{id}
+│ + AssignTask(taskId, userId): ActionRes  │ --> POST: /api/tasks/{taskId}/assign/{userId}
+│ + UpdateStatus(taskId, status): Action   │ --> PUT: /api/tasks/{taskId}/status
+└──────────────────────────────────────────┘
+
+
+┌──────────────────────────────────────────┐
+│       <<Controller>>                     │
+│      ActivitiesController                │
+├──────────────────────────────────────────┤
+│ - _context: TeamManagementDbContext      │
+├──────────────────────────────────────────┤
+│ + GetAllActivities(): ActionResult       │ --> GET: /api/activities
+│ + GetActivityById(id): ActionResult      │ --> GET: /api/activities/{id}
+│ + CreateActivity(activity): ActionResult │ --> POST: /api/activities
+│ + UpdateActivity(id, activity): ActionR  │ --> PUT: /api/activities/{id}
+│ + DeleteActivity(id): ActionResult       │ --> DELETE: /api/activities/{id}
+└──────────────────────────────────────────┘
+
+
+┌──────────────────────────────────────────┐
+│       <<Controller>>                     │
+│       UsersController                    │
+├──────────────────────────────────────────┤
+│ - _context: TeamManagementDbContext      │
+├──────────────────────────────────────────┤
+│ + GetAllUsers(): ActionResult            │ --> GET: /api/users
+│ + GetUserById(id): ActionResult          │ --> GET: /api/users/{id}
+│ + GetUsersByRole(role): ActionResult     │ --> GET: /api/users/role/{role}
+│ + CreateUser(user): ActionResult         │ --> POST: /api/users
+│ + UpdateUser(id, user): ActionResult     │ --> PUT: /api/users/{id}
+└──────────────────────────────────────────┘
+
+
+┌──────────────────────────────────────────┐
+│       <<MVC Controller>>                 │
+│       AdminController                    │
+├──────────────────────────────────────────┤
+│ + Index(): ActionResult                  │ --> View: Admin Dashboard
+└──────────────────────────────────────────┘
+
+
+┌──────────────────────────────────────────┐
+│       <<MVC Controller>>                 │
+│       UserDashboardController            │
+├──────────────────────────────────────────┤
+│ + Tasks(): ActionResult                  │ --> View: User's Tasks Page
+└──────────────────────────────────────────┘
+
+
+┌──────────────────────────────────────────┐
+│       <<ViewModel>>                      │
+│       TaskViewModel                      │
+├──────────────────────────────────────────┤
+│ + TaskId: int                            │
+│ + Title: string                          │
+│ + Description: string                    │
+│ + ActivityName: string                   │
+│ + AssignedToName: string                 │
+│ + Status: string                         │
+│ + Priority: string                       │
+│ + DueDate: DateTime?                     │
+│ + CreatedByName: string                  │
+└──────────────────────────────────────────┘
+
+
+========================================
+DESIGN PATTERNS USED
+========================================
+
+1. **Repository Pattern**: 
+   - DbContext acts as repository for data access
+
+2. **MVC Pattern**:
+   - Models: User, Activity, Task (Domain entities)
+   - Views: Admin/Index.cshtml, UserDashboard/Tasks.cshtml
+   - Controllers: API Controllers + MVC Controllers
+
+3. **Hub Pattern (SignalR)**:
+   - TaskHub: Central hub for real-time communication
+   - Clients connect and receive real-time updates
+
+4. **Dependency Injection**:
+   - Controllers receive DbContext and HubContext via DI
+
+========================================
+COMPONENT INTERACTIONS
+========================================
+
+1. **Admin Creates Task**:
+   Admin View (Vue.js) → POST /api/tasks → TasksController 
+   → SaveToDb → TaskHub.NotifyTaskCreated() → All Connected Clients
+
+2. **User Views Tasks**:
+   User View (Vue.js) → GET /api/tasks/user/{id} → TasksController 
+   → Return Tasks → Display in Vue.js
+
+3. **Real-time Update**:
+   Task Updated → SignalR Hub → Broadcasts to All Clients 
+   → Vue.js Listens → Updates UI Automatically
+
+========================================
+KEY RELATIONSHIPS
+========================================
+
+- User (1) ──creates──> (N) Activity
+- User (1) ──creates──> (N) Task
+- User (1) ──assigned to──> (N) Task
+- Activity (1) ──contains──> (N) Task
+- TasksController uses TaskHub for real-time notifications
+- All API Controllers use TeamManagementDbContext for data access

@@ -1,0 +1,120 @@
+=====================================
+ENTITY RELATIONSHIP DIAGRAM (ERD)
+Team Management System
+=====================================
+
+┌─────────────────────────────────┐
+│          USERS                  │
+├─────────────────────────────────┤
+│ PK  UserId (INT)                │
+│     Username (NVARCHAR)         │
+│     FullName (NVARCHAR)         │
+│     Email (NVARCHAR)            │
+│     Role (NVARCHAR)             │ --> Values: 'Admin', 'User'
+│     IsActive (BIT)              │
+│     CreatedDate (DATETIME)      │
+└─────────────────────────────────┘
+         │                  │
+         │                  │ 1
+         │                  │
+         │ 1                │ Creates
+         │                  │
+         │ Creates          ▼
+         │                  ┌─────────────────────────────────┐
+         │                  │       ACTIVITIES                │
+         │                  ├─────────────────────────────────┤
+         │                  │ PK  ActivityId (INT)            │
+         │                  │     ActivityName (NVARCHAR)     │
+         │                  │     Description (NVARCHAR)      │
+         │                  │     StartDate (DATETIME)        │
+         │                  │     EndDate (DATETIME)          │
+         │                  │ FK  CreatedBy (INT)             │ --> References Users(UserId)
+         │                  │     CreatedDate (DATETIME)      │
+         │                  │     IsActive (BIT)              │
+         │                  └─────────────────────────────────┘
+         │                           │
+         │                           │ 1
+         │                           │
+         │                           │ Has Many
+         │                           │
+         │                           ▼ Many
+         │                  ┌─────────────────────────────────┐
+         │                  │          TASKS                  │
+         │                  ├─────────────────────────────────┤
+         │                  │ PK  TaskId (INT)                │
+         │                  │     Title (NVARCHAR)            │
+         │                  │     Description (NVARCHAR)      │
+         │                  │ FK  ActivityId (INT)            │ --> References Activities(ActivityId)
+         │ Assigned To      │ FK  AssignedToUserId (INT)      │ --> References Users(UserId)
+         └──────────────────┤     Status (NVARCHAR)           │ --> Values: 'Pending', 'InProgress', 'Completed', 'OnHold'
+                 Many       │     Priority (NVARCHAR)         │ --> Values: 'Low', 'Medium', 'High', 'Critical'
+                 │          │     DueDate (DATETIME)          │
+                 └──────────┤ FK  CreatedBy (INT)             │ --> References Users(UserId)
+                            │     CreatedDate (DATETIME)      │
+                            │     UpdatedDate (DATETIME)      │
+                            │     CompletedDate (DATETIME)    │
+                            └─────────────────────────────────┘
+
+=====================================
+RELATIONSHIPS EXPLAINED
+=====================================
+
+1. USER → ACTIVITIES (One-to-Many)
+   - One User (Admin) can create many Activities
+   - FK: Activities.CreatedBy → Users.UserId
+   - Relationship: A User creates Activities
+
+2. USER → TASKS (One-to-Many) - ASSIGNMENT
+   - One User can be assigned to many Tasks
+   - FK: Tasks.AssignedToUserId → Users.UserId
+   - Relationship: A User is assigned Tasks
+   - NOTE: AssignedToUserId can be NULL (unassigned tasks)
+
+3. USER → TASKS (One-to-Many) - CREATION
+   - One User (Admin) can create many Tasks
+   - FK: Tasks.CreatedBy → Users.UserId
+   - Relationship: A User creates Tasks
+
+4. ACTIVITIES → TASKS (One-to-Many)
+   - One Activity can have many Tasks
+   - FK: Tasks.ActivityId → Activities.ActivityId
+   - Relationship: An Activity contains Tasks
+
+=====================================
+CARDINALITY
+=====================================
+
+Users : Activities = 1 : N (One-to-Many)
+Users : Tasks (Assigned) = 1 : N (One-to-Many)
+Users : Tasks (Created) = 1 : N (One-to-Many)
+Activities : Tasks = 1 : N (One-to-Many)
+
+=====================================
+KEY FIELDS EXPLANATION
+=====================================
+
+PRIMARY KEYS:
+- Users.UserId: Unique identifier for each user
+- Activities.ActivityId: Unique identifier for each activity
+- Tasks.TaskId: Unique identifier for each task
+
+FOREIGN KEYS:
+- Activities.CreatedBy: References the admin user who created the activity
+- Tasks.ActivityId: Links task to its parent activity
+- Tasks.AssignedToUserId: References the user assigned to the task (nullable)
+- Tasks.CreatedBy: References the admin user who created the task
+
+BUSINESS RULES:
+- Only users with Role='Admin' can create Activities and Tasks
+- Tasks.AssignedToUserId can be NULL (unassigned tasks)
+- Status must be one of: Pending, InProgress, Completed, OnHold
+- Priority must be one of: Low, Medium, High, Critical
+- Users.Role must be either 'Admin' or 'User'
+
+=====================================
+INDEXES FOR PERFORMANCE
+=====================================
+
+- IX_Tasks_AssignedToUserId: Fast lookup of tasks by assigned user
+- IX_Tasks_Status: Fast filtering by task status
+- IX_Tasks_ActivityId: Fast lookup of tasks by activity

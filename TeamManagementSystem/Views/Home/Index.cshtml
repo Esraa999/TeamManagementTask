@@ -1,0 +1,159 @@
+@{
+    ViewBag.Title = "Home";
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewBag.Title - Team Management System</title>
+    
+    <!-- ==> Added: Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- ==> Added: Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        /* ==> Added: Custom CSS */
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .home-container {
+            background: white;
+            border-radius: 20px;
+            padding: 50px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 800px;
+            width: 100%;
+        }
+        .home-title {
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .card-dashboard {
+            border: none;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 15px 0;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .card-dashboard:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+        .card-admin {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .card-user {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        .card-dashboard h3 {
+            margin-bottom: 15px;
+        }
+        .card-dashboard .btn {
+            margin-top: 15px;
+        }
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 15px;
+        }
+        .feature-list li {
+            padding: 8px 0;
+        }
+        .feature-list i {
+            margin-right: 10px;
+            width: 20px;
+        }
+        .footer-text {
+            text-align: center;
+            margin-top: 30px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="home-container">
+        <!-- ==> Header -->
+        <div class="text-center mb-4">
+            <h1 class="home-title">
+                <i class="fas fa-tasks"></i> Team Management System
+            </h1>
+            <p class="lead text-muted">.NET MVC Assignment with Real-time Updates via SignalR</p>
+        </div>
+
+        <!-- ==> Admin Dashboard Card -->
+        <div class="card-dashboard card-admin">
+            <h3><i class="fas fa-user-shield"></i> Admin Dashboard</h3>
+            <p>Access the admin panel to manage tasks, assign work to team members, and monitor progress in real-time.</p>
+            
+            <ul class="feature-list">
+                <li><i class="fas fa-check-circle"></i> Create and manage tasks</li>
+                <li><i class="fas fa-check-circle"></i> Assign tasks to users</li>
+                <li><i class="fas fa-check-circle"></i> Update task status</li>
+                <li><i class="fas fa-check-circle"></i> Real-time synchronization</li>
+            </ul>
+            
+            <a href="@Url.Action("Index", "Admin")" class="btn btn-light btn-lg btn-block">
+                <i class="fas fa-arrow-right"></i> Go to Admin Dashboard
+            </a>
+        </div>
+
+        <!-- ==> User Dashboard Card -->
+        <div class="card-dashboard card-user">
+            <h3><i class="fas fa-user"></i> User Dashboard</h3>
+            <p>View your assigned tasks, track progress, and get real-time notifications when new tasks are assigned.</p>
+            
+            <ul class="feature-list">
+                <li><i class="fas fa-check-circle"></i> View assigned tasks</li>
+                <li><i class="fas fa-check-circle"></i> See task details & priorities</li>
+                <li><i class="fas fa-check-circle"></i> Track due dates</li>
+                <li><i class="fas fa-check-circle"></i> Auto-refresh on updates</li>
+            </ul>
+            
+            <a href="@Url.Action("Index", "User")" class="btn btn-light btn-lg btn-block">
+                <i class="fas fa-arrow-right"></i> Go to User Dashboard
+            </a>
+        </div>
+
+        <!-- ==> Technology Stack Info -->
+        <div class="mt-4 p-3 bg-light rounded">
+            <h5 class="text-center mb-3">Technology Stack</h5>
+            <div class="row text-center">
+                <div class="col-md-4">
+                    <i class="fas fa-server fa-2x text-primary mb-2"></i>
+                    <p><small><strong>Backend:</strong><br>ASP.NET MVC 5<br>Entity Framework 6</small></p>
+                </div>
+                <div class="col-md-4">
+                    <i class="fas fa-desktop fa-2x text-success mb-2"></i>
+                    <p><small><strong>Frontend:</strong><br>Vue.js 2<br>Bootstrap 4</small></p>
+                </div>
+                <div class="col-md-4">
+                    <i class="fas fa-sync-alt fa-2x text-warning mb-2"></i>
+                    <p><small><strong>Real-time:</strong><br>SignalR 2.x<br>WebSockets</small></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==> Footer -->
+        <div class="footer-text">
+            <p>
+                <i class="fas fa-info-circle"></i> 
+                <strong>Note:</strong> This is a demo application. Admin (User ID: 1) and Users (ID: 2, 3) are pre-configured.
+            </p>
+            <p class="text-muted">
+                <small>.NET Development Technical Assignment - CXIC</small>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

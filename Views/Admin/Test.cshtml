@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test Page</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 2px solid #ddd; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        pre { background: #f4f4f4; padding: 10px; overflow: auto; }
+        button { padding: 10px 20px; margin: 5px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>API Diagnostic Test</h1>
+
+    <button onclick="testAllAPIs()">Test All APIs</button>
+
+    <div id="users-test" class="test-section">
+        <h2>Users API Test</h2>
+        <button onclick="testUsers()">Test Users API</button>
+        <div id="users-result"></div>
+    </div>
+
+    <div id="activities-test" class="test-section">
+        <h2>Activities API Test</h2>
+        <button onclick="testActivities()">Test Activities API</button>
+        <div id="activities-result"></div>
+    </div>
+
+    <div id="tasks-test" class="test-section">
+        <h2>Tasks API Test</h2>
+        <button onclick="testTasks()">Test Tasks API</button>
+        <div id="tasks-result"></div>
+    </div>
+
+    <script>
+        function testUsers() {
+            document.getElementById('users-result').innerHTML = '<p>Testing...</p>';
+
+            fetch('/api/users')
+                .then(response => {
+                    console.log('Users Response Status:', response.status);
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Users Data:', data);
+                    document.getElementById('users-test').className = 'test-section success';
+                    document.getElementById('users-result').innerHTML =
+                        '<p><strong>✓ SUCCESS</strong> - Found ' + data.length + ' users</p>' +
+                        '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                })
+                .catch(error => {
+                    console.error('Users Error:', error);
+                    document.getElementById('users-test').className = 'test-section error';
+                    document.getElementById('users-result').innerHTML =
+                        '<p><strong>✗ ERROR:</strong> ' + error.message + '</p>';
+                });
+        }
+
+        function testActivities() {
+            document.getElementById('activities-result').innerHTML = '<p>Testing...</p>';
+
+            fetch('/api/activities')
+                .then(response => {
+                    console.log('Activities Response Status:', response.status);
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Activities Data:', data);
+                    document.getElementById('activities-test').className = 'test-section success';
+                    document.getElementById('activities-result').innerHTML =
+                        '<p><strong>✓ SUCCESS</strong> - Found ' + data.length + ' activities</p>' +
+                        '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                })
+                .catch(error => {
+                    console.error('Activities Error:', error);
+                    document.getElementById('activities-test').className = 'test-section error';
+                    document.getElementById('activities-result').innerHTML =
+                        '<p><strong>✗ ERROR:</strong> ' + error.message + '</p>';
+                });
+        }
+
+        function testTasks() {
+            document.getElementById('tasks-result').innerHTML = '<p>Testing...</p>';
+
+            fetch('/api/tasks')
+                .then(response => {
+                    console.log('Tasks Response Status:', response.status);
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Tasks Data:', data);
+                    document.getElementById('tasks-test').className = 'test-section success';
+                    document.getElementById('tasks-result').innerHTML =
+                        '<p><strong>✓ SUCCESS</strong> - Found ' + data.length + ' tasks</p>' +
+                        '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                })
+                .catch(error => {
+                    console.error('Tasks Error:', error);
+                    document.getElementById('tasks-test').className = 'test-section error';
+                    document.getElementById('tasks-result').innerHTML =
+                        '<p><strong>✗ ERROR:</strong> ' + error.message + '</p>';
+                });
+        }
+
+        function testAllAPIs() {
+            testUsers();
+            testActivities();
+            testTasks();
+        }
+    </script>
+</body>
+</html>
